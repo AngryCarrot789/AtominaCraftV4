@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 namespace AtominaCraftV4.Worlding.Chunking {
@@ -5,7 +6,9 @@ namespace AtominaCraftV4.Worlding.Chunking {
     public readonly struct BlockState {
         public readonly int id;
         public readonly int meta;
-        public readonly int visibility;
+
+        // Private so that a bit can be used as a cheap "nullable" alternative
+        private readonly int visibility;
 
         public bool IsEmpty => this.id == 0;
 
@@ -21,12 +24,19 @@ namespace AtominaCraftV4.Worlding.Chunking {
 
         public bool WestVisible => (this.visibility & 0b100000) != 0;
 
-        public bool AllFacesVisible => this.visibility == 0b111111;
+        public bool AllFacesVisible => (this.visibility & 0b111111) == 0b111111;
+
+        public int Visibility => this.visibility & 0b111111;
+
+        public bool Real {
+            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+            get => (this.visibility & 0b1000000) != 0;
+        }
 
         public BlockState(int id, int meta, int visibility = 0b111111) {
             this.id = id;
             this.meta = meta;
-            this.visibility = visibility;
+            this.visibility = (0b111111 & visibility) | 0b1000000;
         }
     }
 }

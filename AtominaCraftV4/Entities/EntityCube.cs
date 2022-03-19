@@ -56,7 +56,7 @@ namespace AtominaCraftV4.Entities {
 
         public EntityCube() {
             this.colour = new Vector3f(0.8f, 0.2f, 1.0f);
-            this.textureId = 0;
+            this.textureId = 2;
         }
 
         static EntityCube() {

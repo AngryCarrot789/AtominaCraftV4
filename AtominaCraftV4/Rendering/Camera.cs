@@ -60,7 +60,7 @@ namespace AtominaCraftV4.Rendering {
         }
 
         public void Update() {
-            const float sensitivity = 0.0012f;
+            const float sensitivity = 0.0010f;
             float y = Mouse.Instance.ChangeX * sensitivity;
             float p = Mouse.Instance.ChangeY * sensitivity;
 

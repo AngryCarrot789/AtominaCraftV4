@@ -21,9 +21,12 @@ namespace AtominaCraftV4.Utils {
         /// </summary>
         public BlockChunkCoord BlockChunkCoord => new BlockChunkCoord(this.x & 15, this.y, this.z & 15);
 
+        public int ChunkX => this.x >> 4;
+        public int ChunkZ => this.z >> 4;
+
         public BlockWorldCoord(int x, int y, int z) {
             this.x = x;
-            this.y = y;
+            this.y = (y < 0 ? 0 : (y > 255 ? 255 : 0));
             this.z = z;
         }
 

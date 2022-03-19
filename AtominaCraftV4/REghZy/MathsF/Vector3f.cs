@@ -146,6 +146,10 @@ namespace AtominaCraftV4.REghZy.MathsF {
             return new Vector3f(-this.x, -this.y, -this.z);
         }
 
+        public Vector3f Round(int places = 0) {
+            return new Vector3f(FMath.Round(this.x, places), FMath.Round(this.y, places), FMath.Round(this.z, places));
+        }
+
         public bool IsNDC() {
             return this.x > -1.0f && this.x < 1.0f && this.y > -1.0f && this.y < 1.0f && this.z > -1.0f && this.z < 1.0f;
         }

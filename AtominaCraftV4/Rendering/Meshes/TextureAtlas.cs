@@ -10,7 +10,11 @@ namespace AtominaCraftV4.Rendering.Meshes {
         private static int textureId;
         
         static TextureAtlas() {
-            string path = Path.Combine(ResourceLocator.TextureFolderPath, "atlas.png");
+
+        }
+
+        public static void Load() {
+            string path = Path.Combine(ResourceLocator.TextureFolderPath, "texture-atlas.png");
             if (!File.Exists(path)) {
                 throw new FileNotFoundException("File does not exist", path);
             }
@@ -41,11 +45,11 @@ namespace AtominaCraftV4.Rendering.Meshes {
             // 64x64 textures,
             // 32 cols and rows
             textureId = GL.GenTexture();
+            GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2D, textureId);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int) TextureMinFilter.Nearest);
-            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int) TextureMinFilter.Nearest);
-            // GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int) TextureWrapMode.Repeat);
-            // GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int) TextureWrapMode.Repeat);
+            // GL.GenerateMipmap(GenerateMipmapTarget.Texture2D);
+            // GL.GenerateTextureMipmap(textureId);
+
             GL.TexImage2D(
                 TextureTarget.Texture2D,
                 0,
@@ -56,10 +60,16 @@ namespace AtominaCraftV4.Rendering.Meshes {
                 OpenTK.Graphics.OpenGL.PixelFormat.Bgra,
                 PixelType.UnsignedByte,
                 data.Scan0);
+
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int) TextureMinFilter.Nearest);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int) TextureMinFilter.Nearest);
+            // GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int) TextureWrapMode.Repeat);
+            // GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int) TextureWrapMode.Repeat);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int) TextureWrapMode.ClampToEdge);
+            GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int) TextureWrapMode.ClampToEdge);
         }
 
         public static void Use() {
-            GL.ActiveTexture(TextureUnit.Texture0);
             GL.BindTexture(TextureTarget.Texture2D, textureId);
         }
     }

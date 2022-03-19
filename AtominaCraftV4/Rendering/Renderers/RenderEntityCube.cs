@@ -1,4 +1,3 @@
-using System;
 using AtominaCraftV4.Entities;
 using AtominaCraftV4.REghZy.MathsF;
 using AtominaCraftV4.Rendering.Meshes;
@@ -25,8 +24,6 @@ namespace AtominaCraftV4.Rendering.Renderers {
             Matrix4 mv = GetEntityLocalView(entity).Transposed;
             Matrix4 mvp = camera.matrix * GetEntityWorldView(entity);
             CubeShader.Use();
-            // Texture.textures["electromagnet"].Use();
-            TextureAtlas.Use();
             // CubeShader.SetUniformVec3("in_colour", entity.colour);
             CubeShader.SetUniformVec2("uv_offset", GetOffsetUV(entity));
             CubeShader.SetUniformMatrix4("mv", mv);

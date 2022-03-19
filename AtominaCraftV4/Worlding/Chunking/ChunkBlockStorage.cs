@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using AtominaCraftV4.Utils;
 
 namespace AtominaCraftV4.Worlding.Chunking {
@@ -14,77 +15,104 @@ namespace AtominaCraftV4.Worlding.Chunking {
             this.chunk = chunk;
         }
 
-        public StorageSection this[int index] {
-            get => this.sections[index >> 4];
+        public bool TryGetBlockAt(int x, int y, int z, out BlockState state) {
+            StorageSection section = this.sections[y >> 4];
+            if (section == null) {
+                state = default;
+                return false;
+            }
+
+            return section.TryGetBlockAt(x, y & 15, z, out state);
         }
 
-        public BlockData GetBlockAt(int x, int y, int z) {
-            return this.sections[y >> 4]?.GetBlockAt(x, y, z) ?? default;
+        public BlockState GetBlockAt(int x, int y, int z) {
+            StorageSection section = this.sections[y >> 4];
+            if (section == null) {
+                return default;
+            }
+            
+            return section.GetBlockAt(x, y & 15, z);
         }
 
-        public BlockData SetBlockAt(int x, int y, int z, int id, int meta, int visibility = 0b111111) {
-            return (this.sections[y >> 4] ?? (this.sections[y >> 4] = new StorageSection())).SetBlockAt(x, y, z, id, meta, visibility);
-        }
-
-        public BlockData SetBlockAt(int x, int y, int z, BlockData data) {
-            return (this.sections[y >> 4] ?? (this.sections[y >> 4] = new StorageSection())).SetBlockAt(x, y, z, data);
+        public BlockState SetBlockAt(int x, int y, int z, int id, int meta, int visibility = 0b111111) {
+            return (this.sections[y >> 4] ?? (this.sections[y >> 4] = new StorageSection())).SetBlockAt(x, y & 15, z, id, meta, visibility);
         }
 
         public void UpdateBlockVisibility(int x, int y, int z, int visibility, VisibilityUpdateFlag flag) {
-            (this.sections[y >> 4] ?? (this.sections[y >> 4] = new StorageSection())).UpdateBlockVisibility(x, y, z, visibility, flag);
+            (this.sections[y >> 4] ?? (this.sections[y >> 4] = new StorageSection())).UpdateBlockVisibility(x, y & 15, z, visibility, flag);
         }
 
         public void UpdateBlockVisibility(int x, int y, int z, bool visibility, Direction direction) {
-            (this.sections[y >> 4] ?? (this.sections[y >> 4] = new StorageSection())).UpdateBlockVisibility(x, y, z, visibility, direction);
+            (this.sections[y >> 4] ?? (this.sections[y >> 4] = new StorageSection())).UpdateBlockVisibility(x, y & 15, z, direction, visibility);
         }
 
         public bool IsEmpty(int x, int y, int z) {
             StorageSection section = this.sections[y >> 4];
-            return section == null || section.IsEmpty(x, y, z);
+            return section == null || section.IsEmpty(x, y & 15, z);
         }
 
         /// <summary>
         /// A 16x16x16 section of a chunk
         /// </summary>
         public class StorageSection {
-            public readonly BlockData[][] layers;
+            public const int LAYER_COUNT = 16;
+            public const int LAYER_SIZE = 256;
+            public readonly BlockState[][] layers;
 
             public StorageSection() {
-                this.layers = new BlockData[16][];
+                this.layers = new BlockState[LAYER_COUNT][];
             }
 
-            public BlockData GetBlockAt(int x, int y, int z) {
-                return this.layers[y & 15]?[x + (z << 4)] ?? default;
+            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+            public BlockState GetBlockAt(int x, int y, int z) {
+                BlockState[] layer = this.layers[y];
+                if (layer == null) {
+                    return default;
+                }
+
+                return layer[x + (z << 4)];
             }
 
-            public BlockData SetBlockAt(int x, int y, int z, int id, int meta, int visibility = 0b111111) {
-                return (this.layers[y & 15] ?? (this.layers[y & 15] = new BlockData[256]))[x + (z << 4)] = new BlockData(id, meta, visibility);
+            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+            public bool TryGetBlockAt(int x, int y, int z, out BlockState state) {
+                BlockState[] a = this.layers[y];
+                if (a == null) {
+                    state = default;
+                    return false;
+                }
+
+                state = a[x + (z << 4)];
+                return state.Real;
             }
 
-            public BlockData SetBlockAt(int x, int y, int z, BlockData data) {
-                return (this.layers[y & 15] ?? (this.layers[y & 15] = new BlockData[256]))[x + (z << 4)] = data;
+            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+            public BlockState SetBlockAt(int x, int y, int z, int id, int meta, int visibility = 0b111111) {
+                return (this.layers[y] ?? (this.layers[y] = new BlockState[LAYER_SIZE]))[x + (z << 4)] = new BlockState(id, meta, visibility);
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
             public void UpdateBlockVisibility(int x, int y, int z, int visibility, VisibilityUpdateFlag flag) {
-                BlockData data = GetBlockAt(x, y, z);
+                BlockState state = GetBlockAt(x, y, z);
                 switch (flag) {
-                    case VisibilityUpdateFlag.ADD: SetBlockAt(x, y, z, data.id, data.meta, data.visibility | visibility);
+                    case VisibilityUpdateFlag.ADD: SetBlockAt(x, y, z, state.id, state.meta, state.Visibility | visibility);
                         break;
-                    case VisibilityUpdateFlag.SUB: SetBlockAt(x, y, z, data.id, data.meta, data.visibility & ~visibility);
+                    case VisibilityUpdateFlag.SUB: SetBlockAt(x, y, z, state.id, state.meta, state.Visibility & ~visibility);
                         break;
-                    case VisibilityUpdateFlag.SET: SetBlockAt(x, y, z, data.id, data.meta, visibility);
+                    case VisibilityUpdateFlag.SET: SetBlockAt(x, y, z, state.id, state.meta, visibility);
                         break;
-                    default: throw new ArgumentOutOfRangeException(nameof(flag), flag, null);
+                    default: throw new ArgumentOutOfRangeException(nameof(flag), flag, "VisibilityUpdateFlag was invalid");
                 }
             }
 
-            public void UpdateBlockVisibility(int x, int y, int z, bool visibility, Direction direction) {
-                UpdateBlockVisibility(x, y, z, direction.BitMask, visibility ? VisibilityUpdateFlag.ADD : VisibilityUpdateFlag.SUB);
+            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+            public void UpdateBlockVisibility(int x, int y, int z, Direction direction, bool visible) {
+                UpdateBlockVisibility(x, y, z, direction.BitMask, visible ? VisibilityUpdateFlag.ADD : VisibilityUpdateFlag.SUB);
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
             public bool IsEmpty(int x, int y, int z) {
-                BlockData[] layer = this.layers[y & 15];
-                return layer == null || layer[x + (z << 4)].id == 0;
+                BlockState[] layer = this.layers[y];
+                return layer == null || !layer[x + (z << 4)].Real;
             }
         }
     }

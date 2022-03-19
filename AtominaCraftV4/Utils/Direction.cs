@@ -65,11 +65,11 @@ namespace AtominaCraftV4.Utils {
             return a & ~b.BitMask;
         }
 
-        public BlockData GetBlockAt(World world, int x, int y, int z) {
+        public BlockState GetBlockAt(World world, int x, int y, int z) {
             return world.GetBlockAt(this.x + x, this.y + y, this.z + z);
         }
 
-        public BlockData GetBlockAt(World world, BlockWorldCoord coord) {
+        public BlockState GetBlockAt(World world, BlockWorldCoord coord) {
             return world.GetBlockAt(this.x + coord.x, this.y + coord.y, this.z + coord.z);
         }
 

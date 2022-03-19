@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using AtominaCraftV4.Utils;
 using AtominaCraftV4.Worlding;
+using AtominaCraftV4.Worlding.Chunking;
 
 namespace AtominaCraftV4.Blocks {
     public class Block {
@@ -81,14 +82,21 @@ namespace AtominaCraftV4.Blocks {
         /// Whether this block's face (in the given normal direction) is visible
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public virtual bool IsFaceVisible(World world, in BlockWorldCoord coord, Direction direction) {
-            BlockWorldCoord question = coord + direction;
-            Block block = Blocks[world.GetBlockAt(question).id];
-            return block == null || !block.CanObscureBlock(world, question, direction.Opposite);
+        public virtual bool IsFaceVisible(World world, int x, int y, int z, Direction direction) {
+            if (world.TryGetBlockAt(x + direction.x, y + direction.y, z + direction.z, out BlockState state)) {
+                Block block = Blocks[state.id];
+                return block == null || block.isTransparent;
+                // return block == null || !block.CanObscureOppositeBlock(world, x + direction.x, y + direction.y, z + direction.z, direction.Opposite);
+            }
+
+            return true;
         }
 
+        /// <summary>
+        /// Whether this block can obscure the face of another block (offset by direction)
+        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        public virtual bool CanObscureBlock(World world, in BlockWorldCoord coord, Direction direction) {
+        public virtual bool CanObscureOppositeBlock(World world, int x, int y, int z, Direction direction) {
             if (this.isTransparent) {
                 return false;
             }

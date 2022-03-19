@@ -1,6 +1,5 @@
 using System;
-using System.Collections.Generic;
-using System.Numerics;
+using System.Security;
 using System.Threading;
 using AtominaCraftV4.Blocks;
 using AtominaCraftV4.Entities;
@@ -32,6 +31,8 @@ namespace AtominaCraftV4 {
         private long totalAppTicks;
         private long totalRenderTicks;
 
+        public const bool UseWireframe = false;
+
         private static TaskManager tasks;
         public static TaskManager Tasks => tasks;
         public bool IsRunning => this.isRunning;
@@ -49,46 +50,34 @@ namespace AtominaCraftV4 {
 
         public void SetupGame() {
             this.world = new World("world");
-
             this.sky = new Sky();
-
             this.player = new EntityPlayer();
-            EntityCube cube = new EntityCube();
-            cube.pos = new Vector3f(0, 0, -10);
-            cube.textureId = 2;
-            cube.AllFacesVisible = false;
-            cube.TopVisible = true;
-            cube.WestVisible = true;
-
-            EntityCube floor = new EntityCube();
-            floor.scale = new Vector3f(100.0f, 0.1f, 100.0f);
-            floor.pos = new Vector3f(0.0f, -10.0f, 0.0f);
-            floor.colour = new Vector3f(0.3f, 0.3f, 0.7f);
-            floor.textureId = 0;
-            floor.AllFacesVisible = true;
-
             this.world.entities.Add(this.player);
-            this.world.entities.Add(cube);
-            this.world.entities.Add(floor);
 
-            int y = 0;
+            EntityCube cube = new EntityCube();
+            cube.pos = new Vector3f(32f, 20f, 32f);
+            cube.scale = new Vector3f(3f);
+            cube.AllFacesVisible = true;
+            this.world.entities.Add(cube);
+
+            this.player.pos = new Vector3f(40f, 20f, 40f);
+            this.player.camera.yaw = Rotation.DegreesToRadians(45);
+            this.player.camera.pitch = Rotation.DegreesToRadians(-25);
+
             for (int z = -1; z <= 1; z++) {
                 for (int x = -1; x <= 1; x++) {
-                    GenerateChunk(this.world.GetChunkAt(x, z), y);
+                    for (int y = 0; y < 5; y++) {
+                        GenerateChunk(this.world.GetChunkAt(x, z), y);
+                    }
                 }
-
-                ++y;
             }
         }
 
-        private void GenerateChunk(Chunk chunk, int step) {
-            int y = step;
-            for (int z = 0; z < 16; z++) {
-                for (int x = 0; x < 16; x++) {
+        private void GenerateChunk(Chunk chunk, int y) {
+            for (int x = 0; x < 16; x++) {
+                for (int z = 0; z < 16; z++) {
                     chunk.SetBlockIdMeta(x, y, z, Block.GRASS.id, 0);
                 }
-
-                ++y;
             }
         }
 
@@ -111,7 +100,7 @@ namespace AtominaCraftV4 {
             GLFW.SetErrorCallback(ErrorCallback);
 
             NativeWindowSettings settings = new NativeWindowSettings();
-            // settings.Profile = ContextProfile.Compatability;
+            settings.Profile = ContextProfile.Compatability;
             this.window = new ACWindow(settings, "AtominaCraft!!! :)");
             this.window.MakeCurrent();
             this.window.Show();
@@ -124,8 +113,10 @@ namespace AtominaCraftV4 {
             GL.DepthFunc(DepthFunction.Less);
             GL.DepthMask(true);
 
-            // GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
-            // GL.ShadeModel(ShadingModel.Smooth);
+            if (UseWireframe) {
+                GL.PolygonMode(MaterialFace.FrontAndBack, PolygonMode.Line);
+                GL.ShadeModel(ShadingModel.Smooth);
+            }
         }
 
         private void ErrorCallback(ErrorCode error, string description) {
@@ -154,15 +145,18 @@ namespace AtominaCraftV4 {
             this.isRunning = true;
             this.logger.Info($"GuiGL successfully initialised in {Time.GetSystemMillis() - this.initTime} milliseconds");
 
-            const double target_tickrate = 200;
-            const double target_framerate = 90;
-            const double delta_game_tick = 1000.0f / target_tickrate;
-            const double delta_game_fps = 1000.0f / target_framerate;
-
             double tickStart = Time.GetSystemMillisD();
             double tickEnd = tickStart + 1.0d;
 
-            TextureAtlas.Use();
+            try {
+                TextureAtlas.Load();
+                TextureAtlas.Use();
+            }
+            catch (Exception e) {
+                throw new Exception("Failed to load texture atlas", e);
+            }
+
+            GL.BindVertexArray(Tessellator.vao);
 
             // TODO: maybe implement a tick catchup system, in case the app misses a tick for some reason. Should be fine though
             try {
@@ -226,32 +220,50 @@ namespace AtominaCraftV4 {
             }
         }
 
+        public static string EnsureStringLength(string value, int len = 10, char fill = ' ') {
+            if (value.Length >= len) {
+                return value.Substring(0, len);
+            }
+            else {
+                return value + StringUtils.Repeat(fill, len - value.Length);
+            }
+        }
+
         public void DoGameUpdate() {
+            this.world.Update();
+
             unsafe {
-                GLFW.SetWindowTitle(this.window.Handle, $"AtominaCraft - {Math.Round(Delta.time, 5)}");
+                Vector3f pos = (this.player.pos).Round(1);
+                string a = EnsureStringLength(pos.x.ToString(), 6);
+                string b = EnsureStringLength(pos.y.ToString(), 6);
+                string c = EnsureStringLength(pos.z.ToString(), 6);
+                GLFW.SetWindowTitle(this.window.Handle, $"AtominaCraft - {Math.Round(Delta.time, 5)} - {a} | {b} | {c}");
             }
 
-            this.world.Update();
         }
 
         public void DoGameRender() {
             // don't clear ColorBufferBit if using sky
-            GL.Clear(ClearBufferMask.DepthBufferBit);
-            this.sky.Draw(this.player.camera);
-
-            // GL.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-            // GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-
-            // foreach (Entity entity in this.world.entities) {
-            //     GL.PushMatrix();
-            //     EntityRenderer.RenderEntity(entity, this.player.camera);
-            //     GL.PopMatrix();
-            // }
-
-            foreach (LKDEntry<Chunk> entry in this.world.chunks) {
-                Tessellator.DrawChunk(entry.value);
+            if (UseWireframe) {
+                GL.ClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+                GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            }
+            else {
+                GL.Clear(ClearBufferMask.DepthBufferBit);
+                this.sky.Draw(this.player.camera);
             }
 
+            foreach (Entity entity in this.world.entities) {
+                EntityRenderer.RenderEntity(entity, this.player.camera);
+            }
+
+            Tessellator.TextureShader.Use();
+            foreach (LKDEntry<Chunk> entry in this.world.chunks) {
+                Tessellator.DrawChunk(entry.value);
+                // DrawChunkCenterOutline(this.player.camera, entry.value);
+            }
+
+            // DrawXYZ(EntityPlayer.MainCamera.proj, this.player.camera.yaw, this.player.camera.pitch);
 
             // Tessellator.DrawCube(new Vector3f(0, 0, 0), 2, 0b111111);
         }
@@ -267,6 +279,163 @@ namespace AtominaCraftV4 {
             this.isRunning = false;
             this.logger.Info("Shutting down...");
             GLFW.Terminate();
+        }
+
+        private static void Vertex4(in Vector4f v) {
+            GL.Vertex4(v.x, v.y, v.z, v.w);
+        }
+
+        public static void DrawChunkCenterOutline(Camera camera, Chunk chunk, float r = 0.2f, float g = 0.8f, float b = 0.3f) {
+            Matrix4 mvp = camera.matrix * Matrix4.LocalToWorld(new Vector3f((chunk.x << 4) + 8.0f, 128.0f, (chunk.z << 4) + 8.0f), Vector3f.Zero, new Vector3f(8.0f, 128.0f, 8.0f));
+            Vector4f v1 = mvp * new Vector4f(1.0f, 1.0f, -1.0f, 1.0f);
+            Vector4f v2 = mvp * new Vector4f(1.0f, -1.0f, -1.0f, 1.0f);
+            Vector4f v3 = mvp * new Vector4f(-1.0f, -1.0f, -1.0f, 1.0f);
+            Vector4f v4 = mvp * new Vector4f(-1.0f, 1.0f, -1.0f, 1.0f);
+            Vector4f v5 = mvp * new Vector4f(-1.0f, 1.0f, 1.0f, 1.0f);
+            Vector4f v6 = mvp * new Vector4f(-1.0f, -1.0f, 1.0f, 1.0f);
+            Vector4f v7 = mvp * new Vector4f(1.0f, -1.0f, 1.0f, 1.0f);
+            Vector4f v8 = mvp * new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
+
+            GL.DepthFunc(DepthFunction.Lequal);
+            GL.UseProgram(0);
+
+            GL.LineWidth(2);
+
+            GL.Color3(r, g, b);
+            GL.Begin(PrimitiveType.LineLoop);
+            Vertex4(v1);
+            Vertex4(v2);
+            Vertex4(v3);
+            Vertex4(v4);
+            GL.End();
+
+            GL.Begin(PrimitiveType.LineLoop);
+            Vertex4(v4);
+            Vertex4(v5);
+            Vertex4(v6);
+            Vertex4(v3);
+            GL.End();
+
+            GL.Begin(PrimitiveType.LineLoop);
+            Vertex4(v6);
+            Vertex4(v5);
+            Vertex4(v8);
+            Vertex4(v7);
+            GL.End();
+
+            GL.Begin(PrimitiveType.LineLoop);
+            Vertex4(v8);
+            Vertex4(v7);
+            Vertex4(v2);
+            Vertex4(v1);
+            GL.End();
+
+            GL.DepthFunc(DepthFunction.Less);
+            GL.LineWidth(1);
+        }
+
+        public static void DrawXYZ(in Matrix4 proj, float rotX, float rotY) {
+            Vector3f position = new Vector3f(0.0f, 0.0f, -1.0f);
+            Vector3f scale = new Vector3f(0.1f);
+
+            Quaternion y = Quaternion.AngleAxis(-rotY, Vector3f.Up);
+            Quaternion x = Quaternion.AngleAxis(-rotX, Vector3f.Backward);
+            Vector3f euler = (y * x).ToEuler();
+
+            Matrix4 worldView = Matrix4.LocalToWorld(position, euler, scale);
+            Matrix4 worldProjected = proj * worldView;
+            Vector4f c = worldProjected * new Vector4f(0, 0, 0, 1);
+            Vector4f xP = worldProjected * new Vector4f(1.5f, 0.0f, 0.0f, 1);
+            Vector4f yP = worldProjected * new Vector4f(0.0f, 1.5f, 0.0f, 1);
+            Vector4f zP = worldProjected * new Vector4f(0.0f, 0.0f, 1.5f, 1);
+            Vector4f xN = worldProjected * new Vector4f(-0.5f, 0.0f, 0.0f, 1);
+            Vector4f yN = worldProjected * new Vector4f(0.0f, -0.5f, 0.0f, 1);
+            Vector4f zN = worldProjected * new Vector4f(0.0f, 0.0f, -0.5f, 1);
+
+            GL.LineWidth(2);
+            GL.DepthFunc(DepthFunction.Always);
+            GL.UseProgram(0);
+
+            // positives
+
+            GL.Begin(PrimitiveType.LineLoop);
+            GL.Color3(1.0f, 0.0f, 0.0f);
+            Vertex4(c);
+            Vertex4(xP);
+            GL.End();
+
+            GL.Begin(PrimitiveType.LineLoop);
+            GL.Color3(0.0f, 1.0f, 0.0f);
+            Vertex4(c);
+            Vertex4(yP);
+            GL.End();
+
+            GL.Begin(PrimitiveType.LineLoop);
+            GL.Color3(0.0f, 0.0f, 1.0f);
+            Vertex4(c);
+            Vertex4(zP);
+            GL.End();
+
+            // negatives
+
+            GL.Begin(PrimitiveType.LineLoop);
+            GL.Color3(0.5f, 0.0f, 0.0f);
+            Vertex4(c);
+            Vertex4(xN);
+            GL.End();
+
+            GL.Begin(PrimitiveType.LineLoop);
+            GL.Color3(0.0f, 0.5f, 0.0f);
+            Vertex4(c);
+            Vertex4(yN);
+            GL.End();
+
+            GL.Begin(PrimitiveType.LineLoop);
+            GL.Color3(0.0f, 0.0f, 0.5f);
+            Vertex4(c);
+            Vertex4(zN);
+            GL.End();
+
+            Vector4f v1 = worldProjected * new Vector4f(1.0f, 1.0f, -1.0f, 1.0f);
+            Vector4f v2 = worldProjected * new Vector4f(1.0f, -1.0f, -1.0f, 1.0f);
+            Vector4f v3 = worldProjected * new Vector4f(-1.0f, -1.0f, -1.0f, 1.0f);
+            Vector4f v4 = worldProjected * new Vector4f(-1.0f, 1.0f, -1.0f, 1.0f);
+            Vector4f v5 = worldProjected * new Vector4f(-1.0f, 1.0f, 1.0f, 1.0f);
+            Vector4f v6 = worldProjected * new Vector4f(-1.0f, -1.0f, 1.0f, 1.0f);
+            Vector4f v7 = worldProjected * new Vector4f(1.0f, -1.0f, 1.0f, 1.0f);
+            Vector4f v8 = worldProjected * new Vector4f(1.0f, 1.0f, 1.0f, 1.0f);
+
+            GL.Begin(PrimitiveType.LineLoop);
+            GL.Color3(0.8f, 0.3f, 0.7f);
+            Vertex4(v1);
+            Vertex4(v2);
+            Vertex4(v3);
+            Vertex4(v4);
+            GL.End();
+
+            GL.Begin(PrimitiveType.LineLoop);
+            Vertex4(v4);
+            Vertex4(v5);
+            Vertex4(v6);
+            Vertex4(v3);
+            GL.End();
+
+            GL.Begin(PrimitiveType.LineLoop);
+            Vertex4(v6);
+            Vertex4(v5);
+            Vertex4(v8);
+            Vertex4(v7);
+            GL.End();
+
+            GL.Begin(PrimitiveType.LineLoop);
+            Vertex4(v8);
+            Vertex4(v7);
+            Vertex4(v2);
+            Vertex4(v1);
+            GL.End();
+
+            GL.DepthFunc(DepthFunction.Lequal);
+            GL.LineWidth(1);
         }
     }
 }

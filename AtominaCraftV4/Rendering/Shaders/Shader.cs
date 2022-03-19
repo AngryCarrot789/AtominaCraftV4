@@ -114,6 +114,10 @@ namespace AtominaCraftV4.Rendering.Shaders {
             GL.Uniform2(GetUniformLocation(name), value.x, value.y);
         }
 
+        public void SetUniformVec2(int location, in Vector2f value) {
+            GL.Uniform2(location, value.x, value.y);
+        }
+
         public void SetUniformVec3(string name, in Vector3f value) {
             GL.Uniform3(GetUniformLocation(name), value.x, value.y, value.z);
         }
@@ -126,6 +130,14 @@ namespace AtominaCraftV4.Rendering.Shaders {
             unsafe {
                 fixed (float* ptr = &value.M00) {
                     GL.UniformMatrix4(GetUniformLocation(name), 1, true, ptr);
+                }
+            }
+        }
+
+        public void SetUniformMatrix4(int location, in Matrix4 value) {
+            unsafe {
+                fixed (float* ptr = &value.M00) {
+                    GL.UniformMatrix4(location, 1, true, ptr);
                 }
             }
         }
