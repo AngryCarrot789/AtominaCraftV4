@@ -85,7 +85,7 @@ namespace AtominaCraftV4.Windowing {
             unsafe {
                 this.window = window;
                 GLFW.SetMouseButtonCallback(this.window.Handle, this.mbttnCallback = OnMouseButton);
-                GLFW.SetCursorPosCallback(this.window.Handle, this.mposCallback = OnMousePosition);
+                // GLFW.SetCursorPosCallback(this.window.Handle, this.mposCallback = OnMousePosition);
             }
         }
 
@@ -109,11 +109,19 @@ namespace AtominaCraftV4.Windowing {
             // Console.WriteLine($"{this.prevMouseX} {this.prevMouseY} -> {x} {y} ({this.ChangeX} {this.ChangeY})");
         }
 
-        public void UpdateFrame() {
+        public void EndFrame() {
             this.buttonsPrevious.SetAll(false);
             this.buttonsPrevious.Or(this.buttons);
             this.prevMouseX = this.mouseX;
             this.prevMouseY = this.mouseY;
+        }
+
+        public void BeginFrame() {
+            unsafe {
+                GLFW.GetCursorPos(this.window.Handle, out double x, out double y);
+                this.mouseX = (float) x;
+                this.mouseY = (float) y;
+            }
         }
 
         private void OnMouseUp(MouseButton button, InputAction action, KeyModifiers mods) {

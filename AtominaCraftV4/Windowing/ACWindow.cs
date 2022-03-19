@@ -224,9 +224,13 @@ namespace AtominaCraftV4.Windowing {
             this.isCursorLatched = false;
         }
 
-        public void TickUpdate() {
-            this.keyboard.UpdateFrame();
-            this.mouse.UpdateFrame();
+        public void EndFrame() {
+            this.keyboard.EndFrame();
+            this.mouse.EndFrame();
+        }
+
+        public void BeginFrame() {
+            this.mouse.BeginFrame();
         }
 
         public void MakeCurrent() {

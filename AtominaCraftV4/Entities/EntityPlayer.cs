@@ -56,7 +56,7 @@ namespace AtominaCraftV4.Entities {
         }
 
         public void Move(float back, float right, float up) {
-            Matrix4 camToWorld = Matrix4.LocalToWorld(this.pos, this.euler, this.scale) * Matrix4.RotY(this.camera.rotateY);
+            Matrix4 camToWorld = Matrix4.LocalToWorld(this.pos, this.euler, this.scale) * Matrix4.RotY((float) this.camera.yaw);
             Vector3f lookDirection = camToWorld.MultiplyDirection(new Vector3f(right, up, back)).Normalise();
             Vector3f movement = lookDirection.GetNonNAN() * (this.moveSpeed * Delta.time);
             this.velocity += movement;

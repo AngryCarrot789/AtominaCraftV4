@@ -146,7 +146,7 @@ namespace AtominaCraftV4 {
                 Mouse.Instance.PreviousPosition = new Vector2f((float) x, (float) y);
             }
 
-            this.window.TickUpdate();
+            this.window.EndFrame();
 
             SetupGame();
             SetupRender();
@@ -159,34 +159,19 @@ namespace AtominaCraftV4 {
             const double delta_game_tick = 1000.0f / target_tickrate;
             const double delta_game_fps = 1000.0f / target_framerate;
 
-            double time = 0.0d;
-            double lastRender = Time.GetSystemMillisD();
-
-            double appTickStart = 0.0d;
-            double appTickEnd = 0.0d;
-            double appInterval = 0.0d;
-            double appDelay = 0.0d;
-            double appNextTick = 0.0d;
-
-            double renderTickStart = 0.0d;
-            double renderTickEnd = lastRender;
-            double renderInterval = 0.0d;
-            double renderDelay = 0.0d;
-            double renderNextTick = 0.0d;
+            double tickStart = Time.GetSystemMillisD();
+            double tickEnd = tickStart + 1.0d;
 
             TextureAtlas.Use();
 
             // TODO: maybe implement a tick catchup system, in case the app misses a tick for some reason. Should be fine though
             try {
                 while (true) {
-                    time = Time.GetSystemMillisD();
+                    tickStart = Time.GetSystemMillisD();
+                    Delta.time_d = (tickStart - tickEnd) / 1000.0d;
+                    Delta.time = (float) Delta.time_d;
 
-                    // appTickStart = Time.GetSystemMillisD();
                     DoGlobalTick();
-                    // appTickEnd = Time.GetSystemMillisD();
-                    // appInterval = appTickEnd - appTickStart;
-                    // appDelay = delta_game_tick - appInterval;
-                    // appNextTick = Time.GetSystemMillisD() + appDelay;
 
                     if (ACWindow.MainWindow.ShouldClose) {
                         BeginSafeShutdown();
@@ -197,16 +182,8 @@ namespace AtominaCraftV4 {
                         return;
                     }
 
-                    // renderTickStart = Time.GetSystemMillisD();
-                    lastRender = renderTickEnd;
                     DoGlobalRender();
-                    renderTickEnd = Time.GetSystemMillisD();
-                    // renderInterval = renderTickEnd - renderTickStart;
-                    // renderDelay = delta_game_fps - renderInterval;
-                    // renderNextTick = Time.GetSystemMillisD() + renderDelay;
-                    double delta = (renderTickEnd - lastRender) / 1000.0d;
-                    Delta.time_d = delta;
-                    Delta.time = (float) delta;
+                    tickEnd = tickStart;
                 }
             }
             catch (ThreadInterruptedException e) {
@@ -219,8 +196,10 @@ namespace AtominaCraftV4 {
 
         public void DoGlobalTick() {
             this.totalAppTicks++;
-            ACWindow.MainWindow.TickUpdate();
+            ACWindow.MainWindow.EndFrame();
             GLFW.PollEvents();
+
+            ACWindow.MainWindow.BeginFrame();
             tasks.ProcessQueue();
             if (ACWindow.MainWindow.Keyboard.IsKeyDown(Keys.Escape)) {
                 BeginSafeShutdown();

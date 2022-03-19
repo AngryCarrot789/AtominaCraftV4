@@ -1,7 +1,9 @@
 using System;
+using System.Net.Http.Headers;
 using AtominaCraftV4.REghZy.MathsF;
 using AtominaCraftV4.Windowing;
 using OpenTK.Mathematics;
+using REghZy.Utils;
 using Matrix4 = AtominaCraftV4.REghZy.MathsF.Matrix4;
 
 namespace AtominaCraftV4.Rendering {
@@ -17,8 +19,8 @@ namespace AtominaCraftV4.Rendering {
         public float near;
         public float far;
 
-        public float rotateX;
-        public float rotateY;
+        public float pitch;
+        public float yaw;
 
         public Camera() {
             this.near = 0.01f;
@@ -53,45 +55,42 @@ namespace AtominaCraftV4.Rendering {
         }
 
         public void SetRotation(float rotateX, float rotateY) {
-            this.rotateX = rotateX;
-            this.rotateY = rotateY;
+            this.pitch = rotateX;
+            this.yaw = rotateY;
         }
 
         public void Update() {
-            // const float sensitivity = 2.75f;
-            const float sensitivity = 0.001f;
-            // const float sensitivity = 0.01f;
-            // rotateX uses mouseY because it's rotation along the Y axis
-            // this.rotateX -= (y * sensitivity * Delta.time);
-            // if (this.rotateX > Maths.PI_HALF)
-            //     this.rotateX = Maths.PI_HALF;
-            // else if (this.rotateX < Maths.PI_NEG / 2)
-            //     this.rotateX = Maths.PI_NEG / 2;
-            // this.rotateY -= (x * sensitivity * Delta.time);
-            // if (this.rotateY > Maths.PI)
-            //     this.rotateY -= Maths.PI_NEG_DOUBLE;
-            // else if (this.rotateY < Maths.PI_NEG)
-            //     this.rotateY += Maths.PI_DOUBLE;
-            // this.rotateY = Math.Clamp(this.rotateY, Maths.PI_NEG_DOUBLE + 0.0001f, Maths.PI_DOUBLE - 0.0001f);
-            // this.view = Matrix4.RotX(-this.rotateX) * Matrix4.RotY(-this.rotateY) * Matrix4.WorldToLocal(this.pos, Vector3f.Zero, Vector3f.One);
+            const float sensitivity = 0.0012f;
+            float y = Mouse.Instance.ChangeX * sensitivity;
+            float p = Mouse.Instance.ChangeY * sensitivity;
 
-            this.rotateX -= (Mouse.Instance.ChangeY * sensitivity);
-            if (this.rotateX > Maths.PI_HALF) {
-                this.rotateX = Maths.PI_HALF;
+            // static string ek(string value, int len = 10, char fill = ' ') {
+            //     if (value.Length >= len) {
+            //         return value.Substring(0, len);
+            //     }
+            //     else {
+            //         return value + StringUtils.Repeat(fill, len - value.Length);
+            //     }
+            // }
+            // Console.WriteLine($"{ek(Math.Round(yaw, 5).ToString())} {ek(Math.Round(pitch, 5).ToString())} ({ek(Math.Round(Mouse.Instance.ChangeX, 5).ToString())} {ek(Math.Round(Mouse.Instance.ChangeY, 5).ToString())})");
+
+            this.yaw -= y;
+            if (this.yaw > Maths.PI) {
+                this.yaw = Maths.PI_NEG + 0.0001f;
             }
-            else if (this.rotateX < Maths.PI_NEG / 2) {
-                this.rotateX = Maths.PI_NEG_HALF;
+            else if (this.yaw < Maths.PI_NEG) {
+                this.yaw = Maths.PI - 0.0001f;
             }
 
-            this.rotateY -= (Mouse.Instance.ChangeX * sensitivity);
-            if (this.rotateY > Maths.PI) {
-                this.rotateY = Maths.PI_NEG + 0.0001f;
+            this.pitch -= p;
+            if (this.pitch > Maths.PI_HALF) {
+                this.pitch = Maths.PI_HALF;
             }
-            else if (this.rotateY < Maths.PI_NEG) {
-                this.rotateY = Maths.PI - 0.0001f;
+            else if (this.pitch < Maths.PI_NEG / 2) {
+                this.pitch = Maths.PI_NEG_HALF;
             }
 
-            this.view = Matrix4.RotX(-this.rotateX) * Matrix4.RotY(-this.rotateY) * Matrix4.Scale(1.0f / Vector3f.One) * Matrix4.Translation(-this.pos);
+            this.view = Matrix4.RotX(-this.pitch) * Matrix4.RotY(-this.yaw) * Matrix4.Scale(1.0f / Vector3f.One) * Matrix4.Translation(-this.pos);
             this.matrix = this.proj * this.view;
         }
     }

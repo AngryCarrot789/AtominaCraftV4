@@ -65,7 +65,7 @@ namespace AtominaCraftV4.Windowing {
 
         }
 
-        public void UpdateFrame() {
+        public void EndFrame() {
             this.keysDownPrev.SetAll(false);
             this.keysDownPrev.Or(this.keysDown);
         }
